@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mujer Irreal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Cabecera fija -->
+  <header class="game-header">
+    <span class="game-header-title">MAMASITA</span>
+    <a href="index.html" class="btn-back">← Menú</a>
+  </header>
+
+  <!-- Área central del juego -->
+  <main class="game-wrapper" style="padding-top: 5rem;">
+
+    <!-- ===== PANTALLA 1: Inicio ===== -->
+    <section class="game-screen active" id="screen-start">
+      <button class="btn-start" id="btnStart">
+        JULIA CARE V3RG4
+      </button>
+    </section>
+
+    <!-- ===== PANTALLA 2: Mensaje / poema ===== -->
+    <section class="game-screen" id="screen-message">
+      <p class="msg-poem" id="msgPoem"></p>
+      <button class="btn-continue" id="btnContinueMsg">SIGA MI AMOLL →</button>
+    </section>
+
+    <!-- ===== PANTALLA 3: Preguntas ===== -->
+    <section class="game-screen" id="screen-questions">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span class="question-counter" id="questionCounter">Pregunta 1 de 3</span>
+      <div class="question-text" id="questionText"></div>
+      <ul class="options-list" id="optionsList"></ul>
+      <button class="btn-continue" id="btnNextQuestion" style="display:none;">
+        CONTINUE VENECA →
+      </button>
+    </section>
+
+    <!-- ===== PANTALLA 4: Ahorcado ===== -->
+    <section class="game-screen" id="screen-hangman">
+      <div class="hangman-area">
+
+        <!-- Dibujo SVG del ahorcado -->
+        <svg class="hangman-svg" viewBox="0 0 160 180" aria-hidden="true">
+          <!-- Base y estructura -->
+          <line x1="10" y1="170" x2="150" y2="170" class="hm-line visible" />
+          <line x1="40"  y1="170" x2="40"  y2="10"  class="hm-line visible" />
+          <line x1="40"  y1="10"  x2="100" y2="10"  class="hm-line visible" />
+          <line x1="100" y1="10"  x2="100" y2="35"  class="hm-line visible" />
+          <!-- Partes del cuerpo (se revelan con errores) -->
+          <!-- 1: cabeza -->
+          <circle cx="100" cy="50" r="16" fill="none" class="hm-line" id="hm-head" />
+          <!-- 2: cuerpo -->
+          <line x1="100" y1="66" x2="100" y2="115" class="hm-line" id="hm-body" />
+          <!-- 3: brazo izquierdo -->
+          <line x1="100" y1="80" x2="74"  y2="100" class="hm-line" id="hm-arm-l" />
+          <!-- 4: brazo derecho -->
+          <line x1="100" y1="80" x2="126" y2="100" class="hm-line" id="hm-arm-r" />
+          <!-- 5: pierna izquierda -->
+          <line x1="100" y1="115" x2="74"  y2="145" class="hm-line" id="hm-leg-l" />
+          <!-- 6: pierna derecha -->
+          <line x1="100" y1="115" x2="126" y2="145" class="hm-line" id="hm-leg-r" />
+        </svg>
+
+        <!-- Contador de errores -->
+        <p class="errors-counter">
+          Errores: <span id="errorsCount">0</span> / <span id="maxErrors">6</span>
+        </p>
+
+        <!-- Palabra con slots -->
+        <div class="word-display" id="wordDisplay"></div>
+
+        <!-- Mensaje final -->
+        <div id="endMessage" style="display:none;"></div>
+
+        <!-- Teclado -->
+        <div class="keyboard" id="keyboard"></div>
+
+        <!-- Botón reiniciar -->
+        <button class="btn-restart" id="btnRestart" style="display:none;">
+          Reiniciar juego
+        </button>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

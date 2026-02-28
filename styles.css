@@ -1,0 +1,579 @@
+/* ============================================================
+   styles.css — Julia Game
+   Paleta: Negro profundo + Verde esmeralda suave
+   ============================================================ */
+
+/* ---------- Variables globales ---------- */
+:root {
+  --bg:          #0d0d0d;
+  --bg-card:     #141414;
+  --bg-card-hover: #1a1f1a;
+  --green:       #4caf82;        /* verde esmeralda suave */
+  --green-dim:   #3a8c64;
+  --green-glow:  rgba(76, 175, 130, 0.18);
+  --green-glow-strong: rgba(76, 175, 130, 0.32);
+  --text:        #e8e8e8;
+  --text-muted:  #6b7068;
+  --border:      rgba(76, 175, 130, 0.15);
+  --border-hover:rgba(76, 175, 130, 0.4);
+  --radius:      12px;
+  --radius-lg:   18px;
+  --transition:  0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-display:'Courier New', 'Lucida Console', monospace;
+  --font-body:   'Georgia', serif;
+}
+
+/* ---------- Reset & base ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Fondo con textura muy sutil */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(76,175,130,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 90% 90%, rgba(76,175,130,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- Utilidades de animación ---------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInFast {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 12px var(--green-glow); }
+  50%       { box-shadow: 0 0 24px var(--green-glow-strong); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes scalePop {
+  0%   { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.fade-in   { animation: fadeIn 0.6s ease forwards; }
+.fade-fast { animation: fadeInFast 0.4s ease forwards; }
+
+/* ---------- Layout helpers ---------- */
+.container {
+  position: relative;
+  z-index: 1;
+  width: min(960px, 95vw);
+  margin-inline: auto;
+  padding-block: 2rem;
+}
+
+/* ============================================================
+   INDEX — MENÚ PRINCIPAL
+   ============================================================ */
+
+/* Cabecera */
+.site-title {
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem, 10vw, 7rem);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: var(--green);
+  text-shadow:
+    0 0 40px rgba(76,175,130,0.25),
+    0 0 80px rgba(76,175,130,0.1);
+  padding-block: 3.5rem 1rem;
+  animation: fadeIn 0.8s ease forwards;
+}
+
+.site-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 3.5rem;
+  animation: fadeIn 0.8s 0.15s ease both;
+}
+
+/* Cuadrícula de niveles */
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1.1rem;
+  animation: fadeIn 0.8s 0.3s ease both;
+}
+
+/* Tarjeta de nivel */
+.level-card {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: default;
+  transition:
+    transform var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition),
+    opacity var(--transition);
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Brillo en esquina superior */
+.level-card::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -40%;
+  width: 80%;
+  height: 80%;
+  background: radial-gradient(circle, rgba(76,175,130,0.07) 0%, transparent 70%);
+  transition: opacity var(--transition);
+  opacity: 0;
+}
+
+/* Nivel activo */
+.level-card.active {
+  cursor: pointer;
+  border-color: var(--border-hover);
+}
+.level-card.active:hover {
+  transform: translateY(-6px) scale(1.03);
+  background: var(--bg-card-hover);
+  border-color: var(--green);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.4),
+    0 0 20px var(--green-glow);
+}
+.level-card.active:hover::before { opacity: 1; }
+
+/* Nivel bloqueado */
+.level-card.locked {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+
+/* Textos dentro de la tarjeta */
+.level-number {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--green);
+  letter-spacing: 0.08em;
+}
+.level-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.level-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* ============================================================
+   JUEGO — juego.html
+   ============================================================ */
+
+/* Wrapper central para pantallas del juego */
+.game-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Cabecera del juego (nivel + botón volver) */
+.game-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: rgba(13,13,13,0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+.game-header-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--green);
+  letter-spacing: 0.15em;
+}
+.btn-back {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  font-family: var(--font-display);
+}
+.btn-back:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* Pantalla del juego (una a la vez) */
+.game-screen {
+  display: none;
+  width: 100%;
+  max-width: 640px;
+  text-align: center;
+}
+.game-screen.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.8rem;
+  animation: scalePop 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+
+/* ---- Pantalla 1: Botón inicio ---- */
+.btn-start {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 3vw, 1.3rem);
+  letter-spacing: 0.2em;
+  padding: 1.2rem 2.8rem;
+  background: transparent;
+  border: 1.5px solid var(--green);
+  color: var(--green);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition);
+  animation: pulse-glow 3s ease-in-out infinite, float 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+.btn-start::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--green-glow);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.btn-start:hover {
+  background: rgba(76,175,130,0.08);
+  box-shadow: 0 0 36px var(--green-glow-strong);
+  transform: scale(1.04);
+}
+.btn-start:hover::after { opacity: 1; }
+
+/* ---- Pantalla 2: Mensaje ---- */
+.msg-poem {
+  font-family: var(--font-body);
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
+  color: var(--text);
+  line-height: 1.8;
+  max-width: 480px;
+  padding: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: 0 0 40px rgba(76,175,130,0.06);
+  font-style: italic;
+}
+
+/* Botón genérico "Continuar" / secundario */
+.btn-continue {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0.75rem 2rem;
+  background: transparent;
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-continue:hover {
+  background: rgba(76,175,130,0.08);
+  border-color: var(--green);
+  box-shadow: 0 0 16px var(--green-glow);
+}
+
+/* ---- Pantalla 3: Preguntas ---- */
+.question-counter {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.question-text {
+  font-size: clamp(1.05rem, 3vw, 1.25rem);
+  color: var(--text);
+  line-height: 1.7;
+  padding: 1.5rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+}
+.options-list {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.option-btn {
+  width: 100%;
+  padding: 0.9rem 1.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+.option-btn:hover {
+  border-color: var(--green);
+  background: var(--bg-card-hover);
+  box-shadow: 0 0 12px var(--green-glow);
+  padding-left: 1.8rem;
+}
+.option-btn.selected {
+  border-color: var(--green);
+  background: rgba(76,175,130,0.1);
+  color: var(--green);
+  box-shadow: 0 0 16px var(--green-glow);
+}
+.option-btn.correct {
+  border-color: #4caf82;
+  background: rgba(76,175,130,0.18);
+  color: #7dd4a8;
+}
+.option-btn.wrong {
+  border-color: #a05050;
+  background: rgba(160,80,80,0.12);
+  color: #c08080;
+}
+.option-btn:disabled { cursor: default; }
+
+/* Barra de progreso preguntas */
+.progress-bar-wrap {
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px var(--green-glow);
+}
+
+/* ---- Pantalla 4: Ahorcado ---- */
+.hangman-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.8rem;
+}
+
+/* Dibujo SVG del ahorcado */
+.hangman-svg {
+  width: 160px;
+  height: 180px;
+}
+.hm-line {
+  stroke: var(--green);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+.hm-line.visible { opacity: 1; }
+
+/* Palabra a adivinar */
+.word-display {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.letter-slot {
+  width: 30px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--green);
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--green-dim);
+  padding-bottom: 4px;
+  min-height: 2rem;
+  transition: color 0.3s ease;
+}
+
+/* Teclado de letras */
+.keyboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  max-width: 520px;
+}
+.key-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.key-btn:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 10px var(--green-glow);
+}
+.key-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.key-btn.hit {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(76,175,130,0.1);
+}
+.key-btn.miss {
+  border-color: #7a4040;
+  color: #a06060;
+  background: rgba(120,60,60,0.1);
+}
+
+/* Contador de errores */
+.errors-counter {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+.errors-counter span {
+  color: var(--green);
+}
+
+/* Mensaje final (victoria/derrota) */
+.end-message {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.15em;
+  text-align: center;
+  padding: 1.5rem 2rem;
+  border-radius: var(--radius-lg);
+  animation: fadeIn 0.5s ease forwards;
+}
+.end-message.win {
+  color: var(--green);
+  border: 1px solid var(--green-dim);
+  background: rgba(76,175,130,0.07);
+  box-shadow: 0 0 30px var(--green-glow);
+}
+.end-message.lose {
+  color: #c08080;
+  border: 1px solid #7a4040;
+  background: rgba(120,60,60,0.07);
+}
+
+/* Botón reiniciar */
+.btn-restart {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0.65rem 1.8rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-restart:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ---- Botón gigante de trampa (Pregunta 2) ---- */
+.btn-trap-reveal {
+  width: 100%;
+  padding: 1.6rem 2rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 4vw, 1.8rem);
+  letter-spacing: 0.12em;
+  color: var(--green);
+  background: rgba(76, 175, 130, 0.07);
+  border: 2px solid var(--green);
+  border-radius: var(--radius-lg);
+  cursor: default;         /* No es clickeable después */
+  animation: fadeIn 0.5s ease forwards, pulse-glow 2.5s ease-in-out infinite;
+  box-shadow: 0 0 30px var(--green-glow-strong);
+  text-shadow: 0 0 20px rgba(76,175,130,0.4);
+  pointer-events: none;    /* Solo decorativo */
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 600px) {
+  .levels-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.8rem;
+  }
+  .game-header { padding: 0.8rem 1rem; }
+  .key-btn { width: 32px; height: 32px; font-size: 0.7rem; }
+  .letter-slot { width: 22px; font-size: 1.1rem; }
+}
