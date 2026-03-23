@@ -13,7 +13,7 @@ const CONFIG = {
   audioFile: 'cancion.mp3',
 
   /* Mensaje que aparece tras iniciar el audio */
-  poem: 'Julia una vez te dediqué un poema... pero ni modo hoy no estamos sentimentales, escuche el mero remix.',
+  poem: 'Julia una vez te dediqué un poema... pero ni modo hoy no estamos sentimentales.',
 
   /* Etiqueta de las tarjetas del menú */
   cardLabel: 'Cosa',
@@ -64,7 +64,7 @@ const CONFIG = {
   hangmanWord: 'OCTANOTRAHPT',
 
   /* Mensaje de victoria personalizado del ahorcado */
-  hangmanWinMsg: 'Epa la Arepa...Amor ya escogió sus audífonos?',
+  hangmanWinMsg: 'Amor ya escogió sus audífonos? 🎧',
 
   /* Máximo de errores en el ahorcado */
   maxErrors: 6
@@ -73,11 +73,13 @@ const CONFIG = {
 /* ============================================================
    DETECCIÓN DE PÁGINA
    ============================================================ */
-const isIndex = !!document.getElementById('levelsGrid');
-const isGame  = !!document.getElementById('screen-start');
+const isIndex  = !!document.getElementById('levelsGrid');
+const isGame   = !!document.getElementById('screen-start');
+const isNivel2 = !!document.getElementById('n2-overlay');
 
-if (isIndex) initMenu();
-if (isGame)  initGame();
+if (isIndex)  initMenu();
+if (isGame)   initGame();
+/* initNivel2() es invocado desde el módulo Firebase en nivel2.html */
 
 /* ============================================================
    INDEX — Menú principal
@@ -90,14 +92,17 @@ function initMenu() {
     const card = document.createElement('div');
     card.classList.add('level-card');
 
-    if (i === 1) {
+    /* Niveles activos: 1 y 2 */
+    const levelLinks = { 1: 'juego.html', 2: 'nivel2.html' };
+
+    if (levelLinks[i]) {
       card.classList.add('active');
       card.setAttribute('role', 'button');
       card.setAttribute('tabindex', '0');
       card.setAttribute('aria-label', `${CONFIG.cardLabel}${i} — disponible`);
-      card.addEventListener('click', () => { window.location.href = 'juego.html'; });
+      card.addEventListener('click', () => { window.location.href = levelLinks[i]; });
       card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') window.location.href = 'juego.html';
+        if (e.key === 'Enter' || e.key === ' ') window.location.href = levelLinks[i];
       });
     } else {
       card.classList.add('locked');
@@ -366,7 +371,7 @@ function initGame() {
     endMessage.className     = `end-message ${win ? 'win' : 'lose'}`;
     endMessage.textContent   = win
       ? CONFIG.hangmanWinMsg
-      : `Muy paila hermana, era "${CONFIG.hangmanWord}"`;
+      : `Game over — La palabra era "${CONFIG.hangmanWord}"`;
 
     btnRestart.style.display = 'inline-flex';
   }
@@ -374,3 +379,315 @@ function initGame() {
   btnRestart.addEventListener('click', initHangman);
 
 } /* fin initGame */
+
+/* ============================================================
+   NIVEL 2 — Sistema de mensajería en tiempo real
+   Requiere: Firebase Firestore + OneSignal (configurados en nivel2.html)
+   ============================================================ */
+function initNivel2() {
+
+  /* ── Esperar a que el módulo Firebase haya montado __N2 ── */
+  if (!window.__N2) {
+    console.warn('Firebase aún no está listo, reintentando...');
+    setTimeout(initNivel2, 200);
+    return;
+  }
+
+  const {
+    db, collection, addDoc, onSnapshot,
+    query, orderBy, serverTimestamp,
+    doc, setDoc, getDoc,
+    ONESIGNAL_APP_ID, ONESIGNAL_API_KEY
+  } = window.__N2;
+
+  /* ── DOM ── */
+  const overlay       = document.getElementById('n2-overlay');
+  const mainPanel     = document.getElementById('n2-main');
+  const btnSoyYo      = document.getElementById('btnSoyYo');
+  const btnSoyJulia   = document.getElementById('btnSoyJulia');
+  const userLabel     = document.getElementById('n2-user-label');
+  const otherLabel    = document.getElementById('n2-other-label');
+  const destName      = document.getElementById('n2-dest-name');
+  const dot           = document.getElementById('n2-dot');
+  const dotOther      = document.getElementById('n2-dot-other');
+  const lastSeen      = document.getElementById('n2-last-seen');
+  const quickBtns     = document.querySelectorAll('.n2-quick-btn');
+  const customInput   = document.getElementById('n2-custom-input');
+  const sendBtn       = document.getElementById('n2-send-btn');
+  const chatBox       = document.getElementById('n2-chat-box');
+  const chatEmpty     = document.getElementById('n2-chat-empty');
+  const toast         = document.getElementById('n2-toast');
+
+  /* ── Estado ── */
+  let currentUser = localStorage.getItem('n2_usuario') || null;
+  let unsubChat   = null;   // para cancelar onSnapshot
+
+  /* ── Nombres visibles ── */
+  const NAMES = { maria: 'Yo 🙋', julia: 'Julia 💚' };
+
+  /* ============================================================
+     PASO 1 — Identificación
+     ============================================================ */
+  function setupIdentity() {
+    if (currentUser) {
+      enterMain(currentUser);
+      return;
+    }
+    overlay.style.display = 'flex';
+    mainPanel.style.display = 'none';
+  }
+
+  btnSoyYo.addEventListener('click', () => chooseUser('maria'));
+  btnSoyJulia.addEventListener('click', () => chooseUser('julia'));
+
+  function chooseUser(user) {
+    localStorage.setItem('n2_usuario', user);
+    currentUser = user;
+    enterMain(user);
+  }
+
+  /* ============================================================
+     PASO 2 — Pantalla principal
+     ============================================================ */
+  function enterMain(user) {
+    overlay.style.display = 'none';
+    mainPanel.style.display = 'flex';
+
+    const other = user === 'maria' ? 'julia' : 'maria';
+
+    /* Etiquetas */
+    userLabel.textContent  = NAMES[user];
+    otherLabel.textContent = NAMES[other];
+    destName.textContent   = NAMES[other];
+
+    /* Activar punto verde propio */
+    dot.classList.add('n2-dot-active');
+
+    /* Registrar presencia en Firestore */
+    updatePresence(user);
+    watchPresence(other);
+
+    /* Inicializar OneSignal */
+    setupOneSignal(user);
+
+    /* Escuchar historial */
+    startChatListener();
+  }
+
+  /* ============================================================
+     PRESENCIA — "última vez activo"
+     ============================================================ */
+  async function updatePresence(user) {
+    try {
+      await setDoc(doc(db, 'presencia', user), {
+        online: true,
+        ultima: serverTimestamp()
+      });
+      /* Marcar offline al cerrar/salir */
+      window.addEventListener('beforeunload', () => {
+        setDoc(doc(db, 'presencia', user), { online: false, ultima: serverTimestamp() });
+      });
+    } catch (e) { console.warn('Presencia no disponible:', e); }
+  }
+
+  function watchPresence(other) {
+    try {
+      onSnapshot(doc(db, 'presencia', other), (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        if (data.online) {
+          dotOther.classList.add('n2-dot-active');
+          lastSeen.textContent = '● en línea';
+        } else {
+          dotOther.classList.remove('n2-dot-active');
+          const ts = data.ultima?.toDate?.();
+          if (ts) {
+            lastSeen.textContent = `· visto ${timeAgo(ts)}`;
+          }
+        }
+      });
+    } catch (e) { console.warn('watchPresence error:', e); }
+  }
+
+  function timeAgo(date) {
+    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (diff < 60)  return 'hace unos segundos';
+    if (diff < 3600) return `hace ${Math.floor(diff/60)} min`;
+    if (diff < 86400) return `hace ${Math.floor(diff/3600)} h`;
+    return `hace ${Math.floor(diff/86400)} d`;
+  }
+
+  /* ============================================================
+     ONESIGNAL — Permisos y tags
+     ============================================================ */
+  function setupOneSignal(user) {
+    if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'TU_ONESIGNAL_APP_ID') {
+      console.warn('OneSignal no configurado — notificaciones push desactivadas.');
+      return;
+    }
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        notifyButton: { enable: false }
+      });
+
+      /* Pedir permiso de notificaciones */
+      await OneSignal.Notifications.requestPermission();
+
+      /* Etiquetar al usuario para poder filtrarlo en el envío */
+      await OneSignal.User.addTag('usuario', user);
+    });
+  }
+
+  /* ============================================================
+     ENVÍO DE MENSAJES
+     ============================================================ */
+  /* Botones rápidos */
+  quickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sendMessage(btn.dataset.msg);
+    });
+  });
+
+  /* Enviar con botón */
+  sendBtn.addEventListener('click', () => {
+    const text = customInput.value.trim();
+    if (!text) return;
+    sendMessage(text);
+    customInput.value = '';
+  });
+
+  /* Enviar con Enter */
+  customInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendBtn.click();
+  });
+
+  async function sendMessage(text) {
+    if (!currentUser || !text) return;
+
+    const other = currentUser === 'maria' ? 'julia' : 'maria';
+
+    /* Animación de envío */
+    sendBtn.classList.add('n2-sending');
+    setTimeout(() => sendBtn.classList.remove('n2-sending'), 600);
+
+    try {
+      /* 1. Guardar en Firestore */
+      await addDoc(collection(db, 'mensajes'), {
+        de:      currentUser,
+        para:    other,
+        mensaje: text,
+        fecha:   serverTimestamp()
+      });
+
+      /* 2. Enviar push via OneSignal REST API */
+      await sendPushNotification(other, text);
+
+    } catch (err) {
+      console.error('Error al enviar:', err);
+      showToast('Error al enviar. Revisa la consola.');
+    }
+  }
+
+  async function sendPushNotification(destUser, text) {
+    if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'TU_ONESIGNAL_APP_ID') return;
+
+    const senderName = NAMES[currentUser] || currentUser;
+    const body = { en: `${senderName}: ${text}` };
+
+    try {
+      await fetch('https://onesignal.com/api/v1/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${ONESIGNAL_API_KEY}`
+        },
+        body: JSON.stringify({
+          app_id: ONESIGNAL_APP_ID,
+          filters: [
+            { field: 'tag', key: 'usuario', relation: '=', value: destUser }
+          ],
+          headings: { en: 'Julia 💚' },
+          contents: body,
+          url: window.location.href
+        })
+      });
+    } catch (err) {
+      console.warn('Push no enviado:', err);
+    }
+  }
+
+  /* ============================================================
+     HISTORIAL EN TIEMPO REAL — Firestore onSnapshot
+     ============================================================ */
+  function startChatListener() {
+    if (unsubChat) unsubChat(); /* Cancelar listener previo si existe */
+
+    try {
+      const q = query(
+        collection(db, 'mensajes'),
+        orderBy('fecha', 'asc')
+      );
+
+      unsubChat = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            renderMessage(change.doc.data());
+          }
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+    } catch (e) {
+      console.warn('Chat listener error:', e);
+    }
+  }
+
+  function renderMessage(data) {
+    /* Ocultar texto "Aún no hay mensajes" */
+    if (chatEmpty) chatEmpty.style.display = 'none';
+
+    const isMine = data.de === currentUser;
+
+    const bubble = document.createElement('div');
+    bubble.classList.add('n2-bubble');
+    bubble.classList.add(isMine ? 'n2-bubble-mine' : 'n2-bubble-theirs');
+
+    const ts = data.fecha?.toDate?.();
+    const timeStr = ts
+      ? ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    bubble.innerHTML = `
+      <span class="n2-bubble-sender">${NAMES[data.de] || data.de}</span>
+      <span class="n2-bubble-text">${escapeHtml(data.mensaje)}</span>
+      <span class="n2-bubble-time">${timeStr}</span>
+    `;
+
+    chatBox.appendChild(bubble);
+
+    /* Toast si el mensaje es del otro */
+    if (!isMine) showToast(`${NAMES[data.de]}: ${data.mensaje}`);
+  }
+
+  /* ============================================================
+     UTILIDADES
+     ============================================================ */
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('n2-toast-show');
+    setTimeout(() => toast.classList.remove('n2-toast-show'), 3500);
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /* ── Arrancar ── */
+  setupIdentity();
+
+} /* fin initNivel2 */
