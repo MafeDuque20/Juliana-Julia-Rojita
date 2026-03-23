@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Julia — Nivel 2</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- =====================================================
+       FIREBASE SDK (módulos ESM via CDN)
+       ===================================================== -->
+  <script type="module">
+    import { initializeApp }              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection,
+             addDoc, onSnapshot,
+             query, orderBy, serverTimestamp,
+             doc, setDoc, getDoc }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    /* =====================================================
+       🔧 REEMPLAZA ESTOS VALORES CON LOS DE TU PROYECTO
+       (Firebase Console → Configuración del proyecto)
+       ===================================================== */
+    const firebaseConfig = {
+      apiKey:          "AIzaSyCVWsFuUXxYuaa2NY1R3KLUOzNKmrbY5Bs",
+      authDomain:      "julia-rojita.firebaseapp.com",
+      projectId:       "julia-rojita",
+      storageBucket:   "julia-rojita.firebasestorage.app",
+      messagingSenderId: "562519764100",
+      appId:           "1:562519764100:web:d75a2028839500e5b6e6d1"
+    };
+    
+    /* =====================================================
+       🔧 REEMPLAZA CON TUS DATOS DE ONESIGNAL
+       ===================================================== */
+    const ONESIGNAL_APP_ID  = "TU_ONESIGNAL_APP_ID";
+    const ONESIGNAL_API_KEY = "TU_ONESIGNAL_REST_API_KEY";  // REST API Key (no la SDK Key)
+
+    /* ----- Inicializar Firebase ----- */
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    /* ----- Exponer al scope global para que script.js lo use ----- */
+    window.__N2 = {
+      db, collection, addDoc, onSnapshot,
+      query, orderBy, serverTimestamp,
+      doc, setDoc, getDoc,
+      ONESIGNAL_APP_ID,
+      ONESIGNAL_API_KEY
+    };
+
+    /* Una vez que Firebase está listo, arrancar nivel2 */
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initNivel2 === 'function') initNivel2();
+    });
+  </script>
+
+  <!-- =====================================================
+       ONESIGNAL SDK
+       ===================================================== -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+  </script>
+</head>
+<body>
+
+  <!-- Cabecera fija -->
+  <header class="game-header">
+    <span class="game-header-title">Nivel 2 — Conectados</span>
+    <a href="index.html" class="btn-back">← Menú</a>
+  </header>
+
+  <!-- =====================================================
+       PANTALLA A: Identificación de usuario
+       ===================================================== -->
+  <div class="n2-overlay" id="n2-overlay">
+    <div class="n2-id-card fade-in">
+      <p class="n2-id-label">¿Quién eres?</p>
+      <div class="n2-id-btns">
+        <button class="n2-id-btn" id="btnSoyYo">
+          <span class="n2-id-icon">🙋</span>
+          <span>Soy yo</span>
+          <span class="n2-id-sub">maria</span>
+        </button>
+        <button class="n2-id-btn" id="btnSoyJulia">
+          <span class="n2-id-icon">💚</span>
+          <span>Soy Julia</span>
+          <span class="n2-id-sub">julia</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       PANTALLA B: Interfaz principal
+       ===================================================== -->
+  <main class="n2-main" id="n2-main" style="display:none;">
+
+    <!-- Barra de estado -->
+    <div class="n2-status-bar">
+      <div class="n2-status-user" id="n2-status-user">
+        <span class="n2-dot" id="n2-dot"></span>
+        <span id="n2-user-label">—</span>
+      </div>
+      <div class="n2-status-other" id="n2-status-other">
+        <span class="n2-dot n2-dot-other" id="n2-dot-other"></span>
+        <span id="n2-other-label">—</span>
+        <span class="n2-last-seen" id="n2-last-seen"></span>
+      </div>
+    </div>
+
+    <!-- ---- PANEL DE ENVÍO ---- -->
+    <section class="n2-send-panel">
+      <p class="n2-section-label">Enviar a <span id="n2-dest-name">—</span></p>
+
+      <!-- Botones rápidos -->
+      <div class="n2-quick-btns">
+        <button class="n2-quick-btn" data-msg="Pensé en ti 😌">Pensé en ti 😌</button>
+        <button class="n2-quick-btn" data-msg="Perdón 😅">Perdón 😅</button>
+        <button class="n2-quick-btn" data-msg="Mira esto 👀">Mira esto 👀</button>
+      </div>
+
+      <!-- Mensaje personalizado -->
+      <div class="n2-input-row">
+        <input
+          type="text"
+          id="n2-custom-input"
+          class="n2-input"
+          placeholder="Escribe algo..."
+          maxlength="140"
+        />
+        <button class="n2-send-btn" id="n2-send-btn" title="Enviar">
+          <span id="n2-send-icon">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ---- HISTORIAL DE MENSAJES ---- -->
+    <section class="n2-chat-section">
+      <p class="n2-section-label">Historial</p>
+      <div class="n2-chat-box" id="n2-chat-box">
+        <p class="n2-chat-empty" id="n2-chat-empty">Aún no hay mensajes...</p>
+      </div>
+    </section>
+
+    <!-- Toast de notificación interna -->
+    <div class="n2-toast" id="n2-toast"></div>
+
+  </main>
+
+  <!-- script.js ya maneja la lógica; initNivel2 se llama desde el módulo de Firebase -->
+  <script src="script.js"></script>
+</body>
+</html>
