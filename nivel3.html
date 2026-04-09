@@ -9,13 +9,13 @@
 <body class="n3-body">
 
   <!-- =====================================================
-       PANTALLA DE ENTRADA — Toque para comenzar (mobile autoplay)
+       PANTALLA DE ENTRADA — toque para activar autoplay
        ===================================================== -->
   <div class="n3-entry" id="n3-entry">
     <div class="n3-entry-inner fade-in">
       <p class="n3-entry-label">Nivel 3</p>
       <button class="n3-entry-btn" id="n3-entry-btn">
-        <span class="n3-entry-icon">▶</span>
+        <span class="n3-entry-icon">&#9654;</span>
         <span>Reproducir historia</span>
       </button>
     </div>
@@ -26,55 +26,32 @@
        ===================================================== -->
   <div class="n3-scene" id="n3-scene" style="display:none;">
 
-    <!-- Barra de progreso superior -->
-    <div class="n3-progress-bar-wrap" id="n3-progress-wrap">
-      <!-- Los segmentos se generan por JS -->
-    </div>
+    <!-- Barra de progreso superior — segmentos generados por JS -->
+    <div class="n3-progress-bar-wrap" id="n3-progress-wrap"></div>
 
     <!-- Botón volver -->
     <a href="index.html" class="n3-back-btn">← Menú</a>
 
-    <!-- Contenedor del video (centrado, 9:16) -->
+    <!-- Contenedor del video 9:16 -->
     <div class="n3-video-wrap" id="n3-video-wrap">
 
-      <!-- Overlay oscuro sutil encima del video para legibilidad -->
+      <!-- Overlay oscuro para legibilidad de mensajes -->
       <div class="n3-video-overlay"></div>
 
-      <!-- ── OPCIÓN A: TikTok embed ── -->
-      <!-- El iframe de TikTok no permite autoplay con sonido fuera de la app,
-           pero intentamos cargarlo. Si el usuario ve pantalla negra,
-           se activa automáticamente el fallback al video local. -->
-      <iframe
-        id="n3-tiktok-frame"
-        class="n3-video-el n3-tiktok"
-        src="https://www.tiktok.com/embed/v2/7624956268213570837?autoplay=1&loop=1&rel=0"
-        allow="autoplay; fullscreen"
-        allowfullscreen
-        frameborder="0"
-        scrolling="no"
-        title="Historia Julia"
-      ></iframe>
-
-      <!-- ── OPCIÓN B: Video local (fallback / alternativa directa) ──
-           Para usar: comenta el iframe de arriba y descomenta esto.
-           Coloca tu archivo video.mp4 en la misma carpeta. -->
-      <!--
+      <!-- ── VIDEO LOCAL ──
+           Coloca FEID.mp4 en la misma carpeta que este archivo. -->
       <video
         id="n3-video-local"
         class="n3-video-el"
-        src="video.mp4"
-        autoplay
+        src="FEID.mp4"
         muted
         playsinline
         loop
         preload="auto"
       ></video>
-      -->
 
-      <!-- Mensajes superpuestos (aparecen sobre el video) -->
-      <div class="n3-messages-area" id="n3-messages-area">
-        <!-- Generados por JS -->
-      </div>
+      <!-- Mensajes superpuestos — generados por JS -->
+      <div class="n3-messages-area" id="n3-messages-area"></div>
 
     </div><!-- /n3-video-wrap -->
 
