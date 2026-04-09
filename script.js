@@ -709,8 +709,8 @@ function initNivel3() {
      ─────────────────────────────────────────────────────────── */
   const MENSAJES = [
     { texto: 'Yo también te quiero',                                               delay: 2500  },
-    { texto: 'te amo',                                                              delay: 5500  },
-    { texto: 'y quiero que seas mi enamorada',                                      delay: 8500  },
+    { texto: 'Te amo',                                                              delay: 5500  },
+    { texto: 'Y quiero que seas mi enamorada',                                      delay: 8500  },
     { texto: 'Perdoname por embarrarla, mamor...sabes que siempre aprendo para ser mejor para tí', delay: 10000 }
   ];
 
