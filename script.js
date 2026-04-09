@@ -76,9 +76,11 @@ const CONFIG = {
 const isIndex  = !!document.getElementById('levelsGrid');
 const isGame   = !!document.getElementById('screen-start');
 const isNivel2 = !!document.getElementById('n2-overlay');
+const isNivel3 = !!document.getElementById('n3-entry');
 
 if (isIndex)  initMenu();
 if (isGame)   initGame();
+if (isNivel3) initNivel3();
 /* initNivel2() es invocado desde el módulo Firebase en nivel2.html */
 
 /* ============================================================
@@ -92,8 +94,8 @@ function initMenu() {
     const card = document.createElement('div');
     card.classList.add('level-card');
 
-    /* Niveles activos: 1 y 2 */
-    const levelLinks = { 1: 'juego.html', 2: 'nivel2.html' };
+    /* Niveles activos: 1 y 3 (Nivel 2 bloqueado) */
+    const levelLinks = { 1: 'juego.html', 3: 'nivel3.html' };
 
     if (levelLinks[i]) {
       card.classList.add('active');
@@ -110,8 +112,10 @@ function initMenu() {
       card.setAttribute('aria-disabled', 'true');
     }
 
+    /* Icono: sólo los desbloqueados muestran 🔓 */
+    const isUnlocked = !!levelLinks[i];
     card.innerHTML = `
-      <span class="level-icon">${i === 1 ? '🔓' : '🔒'}</span>
+      <span class="level-icon">${isUnlocked ? '🔓' : '🔒'}</span>
       <span class="level-number">${String(i).padStart(2, '0')}</span>
       <span class="level-label">${CONFIG.cardLabel}${i}</span>
     `;
@@ -691,3 +695,127 @@ function initNivel2() {
   setupIdentity();
 
 } /* fin initNivel2 */
+
+/* ============================================================
+   NIVEL 3 — Historia + Chat superpuesto
+   ============================================================ */
+function initNivel3() {
+
+  /* ── Configuración de mensajes
+     Modifica aquí el texto, delay y alineación de cada burbuja ── */
+  const MENSAJES = [
+    { texto: 'Yo también te quiero',           delay: 2500 },
+    { texto: 'te amo',                          delay: 5000 },
+    { texto: 'y quiero que seas mi enamorada',  delay: 8000 }
+  ];
+
+  /* Duración total de la barra de progreso en ms
+     Ajusta si el video dura más o menos */
+  const DURACION_TOTAL = 22000;
+
+  /* ── DOM ── */
+  const entryScreen  = document.getElementById('n3-entry');
+  const entryBtn     = document.getElementById('n3-entry-btn');
+  const scene        = document.getElementById('n3-scene');
+  const progressWrap = document.getElementById('n3-progress-wrap');
+  const messagesArea = document.getElementById('n3-messages-area');
+  const tiktokFrame  = document.getElementById('n3-tiktok-frame');
+
+  /* ── Segmentos de la barra de progreso (uno por mensaje + el intro) ── */
+  const SEGMENTOS = MENSAJES.length + 1;
+  let   segActual = 0;
+
+  function buildProgressBar() {
+    progressWrap.innerHTML = '';
+    for (let i = 0; i < SEGMENTOS; i++) {
+      const seg = document.createElement('div');
+      seg.classList.add('n3-seg');
+      const fill = document.createElement('div');
+      fill.classList.add('n3-seg-fill');
+      seg.appendChild(fill);
+      progressWrap.appendChild(seg);
+    }
+  }
+
+  /* Avanza el segmento activo de la barra */
+  function advanceSegment() {
+    const segs = progressWrap.querySelectorAll('.n3-seg');
+    /* Completar el segmento anterior */
+    if (segActual > 0 && segs[segActual - 1]) {
+      segs[segActual - 1].querySelector('.n3-seg-fill').style.width = '100%';
+      segs[segActual - 1].querySelector('.n3-seg-fill').style.transition = 'none';
+    }
+    if (segActual >= SEGMENTOS) return;
+
+    const fill = segs[segActual].querySelector('.n3-seg-fill');
+    /* Calcular duración del segmento */
+    const delays = [0, ...MENSAJES.map(m => m.delay)];
+    const nextDelay = delays[segActual + 1] ?? DURACION_TOTAL;
+    const currDelay = delays[segActual];
+    const duration  = nextDelay - currDelay;
+
+    requestAnimationFrame(() => {
+      fill.style.transition = `width ${duration}ms linear`;
+      fill.style.width = '100%';
+    });
+
+    segActual++;
+  }
+
+  /* ── Crear una burbuja de mensaje ── */
+  function createBubble(texto) {
+    const wrap = document.createElement('div');
+    wrap.classList.add('n3-bubble-wrap');
+
+    const bubble = document.createElement('div');
+    bubble.classList.add('n3-msg-bubble');
+    bubble.textContent = texto;
+
+    wrap.appendChild(bubble);
+    messagesArea.appendChild(wrap);
+
+    /* Forzar reflow para que la animación arranque */
+    void wrap.offsetWidth;
+    wrap.classList.add('n3-bubble-visible');
+
+    /* Scroll suave hacia abajo */
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+  }
+
+  /* ── Intentar reproducir video local si existe ── */
+  function tryLocalVideo() {
+    const localVid = document.getElementById('n3-video-local');
+    if (!localVid) return;
+    localVid.play().catch(() => {});
+  }
+
+  /* ── Arrancar la historia ── */
+  function startStory() {
+    buildProgressBar();
+    advanceSegment(); /* Segmento 0 — intro */
+
+    /* Mostrar mensajes uno a uno */
+    MENSAJES.forEach((msg, i) => {
+      setTimeout(() => {
+        createBubble(msg.texto);
+        advanceSegment();
+      }, msg.delay);
+    });
+
+    /* Intentar reproducir video local como fallback */
+    tryLocalVideo();
+  }
+
+  /* ── Botón de entrada ── */
+  entryBtn.addEventListener('click', () => {
+    entryScreen.classList.add('n3-entry-out');
+    setTimeout(() => {
+      entryScreen.style.display = 'none';
+      scene.style.display = 'flex';
+      /* Pequeño delay para que el fade-in de la escena funcione */
+      requestAnimationFrame(() => scene.classList.add('n3-scene-visible'));
+      startStory();
+    }, 400);
+  });
+
+} /* fin initNivel3 */
