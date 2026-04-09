@@ -701,17 +701,22 @@ function initNivel2() {
    ============================================================ */
 function initNivel3() {
 
-  /* ── Configuración de mensajes
-     Modifica aquí el texto, delay y alineación de cada burbuja ── */
+  /* ── CONFIGURACIÓN DE MENSAJES ──────────────────────────────
+     Cada objeto tiene:
+       texto : el texto que aparece en la burbuja
+       delay : milisegundos desde que arranca el video hasta que aparece
+     Puedes agregar, quitar o reordenar libremente.
+     ─────────────────────────────────────────────────────────── */
   const MENSAJES = [
-    { texto: 'Yo también te quiero',           delay: 2500 },
-    { texto: 'te amo',                          delay: 5000 },
-    { texto: 'y quiero que seas mi enamorada',  delay: 8000 }
+    { texto: 'Yo también te quiero',                                               delay: 2500  },
+    { texto: 'te amo',                                                              delay: 5500  },
+    { texto: 'y quiero que seas mi enamorada',                                      delay: 8500  },
+    { texto: 'Perdoname por embarrarla, mamor...sabes que siempre aprendo para ser mejor para tí', delay: 10000 }
   ];
 
-  /* Duración total de la barra de progreso en ms
-     Ajusta si el video dura más o menos */
-  const DURACION_TOTAL = 22000;
+  /* Duración total visible de la barra de progreso (en ms).
+     Ponla igual o mayor a la duración real del video. */
+  const DURACION_TOTAL = 30000;
 
   /* ── DOM ── */
   const entryScreen  = document.getElementById('n3-entry');
@@ -719,16 +724,17 @@ function initNivel3() {
   const scene        = document.getElementById('n3-scene');
   const progressWrap = document.getElementById('n3-progress-wrap');
   const messagesArea = document.getElementById('n3-messages-area');
-  const tiktokFrame  = document.getElementById('n3-tiktok-frame');
+  const video        = document.getElementById('n3-video-local');
 
-  /* ── Segmentos de la barra de progreso (uno por mensaje + el intro) ── */
+  /* ── Número de segmentos = mensajes + 1 (el segmento intro) ── */
   const SEGMENTOS = MENSAJES.length + 1;
   let   segActual = 0;
 
+  /* ── Construir barra de progreso ── */
   function buildProgressBar() {
     progressWrap.innerHTML = '';
     for (let i = 0; i < SEGMENTOS; i++) {
-      const seg = document.createElement('div');
+      const seg  = document.createElement('div');
       seg.classList.add('n3-seg');
       const fill = document.createElement('div');
       fill.classList.add('n3-seg-fill');
@@ -737,34 +743,41 @@ function initNivel3() {
     }
   }
 
-  /* Avanza el segmento activo de la barra */
+  /* Avanza y anima el siguiente segmento de la barra */
   function advanceSegment() {
     const segs = progressWrap.querySelectorAll('.n3-seg');
-    /* Completar el segmento anterior */
+
+    /* Marcar el segmento anterior como completado al instante */
     if (segActual > 0 && segs[segActual - 1]) {
-      segs[segActual - 1].querySelector('.n3-seg-fill').style.width = '100%';
-      segs[segActual - 1].querySelector('.n3-seg-fill').style.transition = 'none';
+      const prev = segs[segActual - 1].querySelector('.n3-seg-fill');
+      prev.style.transition = 'none';
+      prev.style.width      = '100%';
     }
+
     if (segActual >= SEGMENTOS) return;
 
     const fill = segs[segActual].querySelector('.n3-seg-fill');
-    /* Calcular duración del segmento */
-    const delays = [0, ...MENSAJES.map(m => m.delay)];
-    const nextDelay = delays[segActual + 1] ?? DURACION_TOTAL;
-    const currDelay = delays[segActual];
-    const duration  = nextDelay - currDelay;
 
+    /* Calcular cuánto tiempo dura este segmento */
+    const delays    = [0, ...MENSAJES.map(m => m.delay)];
+    const currDelay = delays[segActual]     ?? 0;
+    const nextDelay = delays[segActual + 1] ?? DURACION_TOTAL;
+    const duration  = Math.max(nextDelay - currDelay, 400);
+
+    /* Doble rAF garantiza que la transición se aplique después del reset */
     requestAnimationFrame(() => {
-      fill.style.transition = `width ${duration}ms linear`;
-      fill.style.width = '100%';
+      requestAnimationFrame(() => {
+        fill.style.transition = `width ${duration}ms linear`;
+        fill.style.width      = '100%';
+      });
     });
 
     segActual++;
   }
 
-  /* ── Crear una burbuja de mensaje ── */
+  /* ── Crear y mostrar una burbuja de mensaje ── */
   function createBubble(texto) {
-    const wrap = document.createElement('div');
+    const wrap   = document.createElement('div');
     wrap.classList.add('n3-bubble-wrap');
 
     const bubble = document.createElement('div');
@@ -774,48 +787,59 @@ function initNivel3() {
     wrap.appendChild(bubble);
     messagesArea.appendChild(wrap);
 
-    /* Forzar reflow para que la animación arranque */
+    /* Forzar reflow antes de añadir la clase visible (activa la transición CSS) */
     void wrap.offsetWidth;
     wrap.classList.add('n3-bubble-visible');
 
-    /* Scroll suave hacia abajo */
+    /* Auto-scroll al último mensaje */
     messagesArea.scrollTop = messagesArea.scrollHeight;
   }
 
-  /* ── Intentar reproducir video local si existe ── */
-  function tryLocalVideo() {
-    const localVid = document.getElementById('n3-video-local');
-    if (!localVid) return;
-    localVid.play().catch(() => {});
+  /* ── Reproducir el video local ── */
+  function playVideo() {
+    if (!video) return;
+    /* El video ya tiene muted + playsinline en el HTML,
+       lo cual garantiza autoplay en móvil tras interacción del usuario */
+    const promise = video.play();
+    if (promise !== undefined) {
+      promise.catch(err => {
+        console.warn('Video no pudo arrancar automáticamente:', err);
+      });
+    }
   }
 
-  /* ── Arrancar la historia ── */
+  /* ── Arrancar toda la secuencia ── */
   function startStory() {
     buildProgressBar();
-    advanceSegment(); /* Segmento 0 — intro */
+    playVideo();
+    advanceSegment(); /* Segmento 0 — intro hasta el primer mensaje */
 
-    /* Mostrar mensajes uno a uno */
-    MENSAJES.forEach((msg, i) => {
+    /* Programar cada mensaje */
+    MENSAJES.forEach((msg) => {
       setTimeout(() => {
         createBubble(msg.texto);
         advanceSegment();
       }, msg.delay);
     });
-
-    /* Intentar reproducir video local como fallback */
-    tryLocalVideo();
   }
 
   /* ── Botón de entrada ── */
   entryBtn.addEventListener('click', () => {
     entryScreen.classList.add('n3-entry-out');
+
     setTimeout(() => {
       entryScreen.style.display = 'none';
-      scene.style.display = 'flex';
-      /* Pequeño delay para que el fade-in de la escena funcione */
-      requestAnimationFrame(() => scene.classList.add('n3-scene-visible'));
-      startStory();
-    }, 400);
+      scene.style.display       = 'flex';
+
+      /* Pequeño delay para que el navegador pinte el display:flex
+         antes de disparar la transición de opacidad */
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scene.classList.add('n3-scene-visible');
+          startStory();
+        });
+      });
+    }, 380);
   });
 
 } /* fin initNivel3 */
